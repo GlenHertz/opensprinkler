@@ -117,7 +117,7 @@ void setup() {
 
   delay(500);
   
-  setSyncInterval(RTC_SYNC_INTERVAL);  // RTC sync interval: 15 minutes
+  setSyncInterval(RTC_SYNC_INTERVAL);  // RTC sync interval: 1 minutes
 
   // if rtc exists, sets it as time sync source
   setSyncProvider(svc.status.has_rtc ? RTC.get : NULL);
