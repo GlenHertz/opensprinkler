@@ -80,6 +80,7 @@ typedef enum {
 // =====================================
 
 // ------ Define hardware version here ------
+#define SVC_HW_VERSION 2560
 //#define SVC_HW_VERSION 14
 //#define SVC_HW_VERSION 13
 //#define SVC_HW_VERSION 12
@@ -89,7 +90,10 @@ typedef enum {
 #error "==This error is intentional==: you must define SVC_HW_VERSION in arduino-xxxx/libraries/OpenSprnikler/defines.h"
 #endif
 
-#if SVC_HW_VERSION == 14
+#if SVC_HW_VERSION == 2560
+  #define PIN_RAINSENSOR     3    // rain sensor is connected to pin D3
+
+#elif SVC_HW_VERSION == 14
 
   #define PIN_READ_BUTTON    0    // analog pin assigned for button reading
   #define PIN_SR_LATCH       7    // shift register latch pin
@@ -150,6 +154,7 @@ typedef enum {
                                   // change if you need  
 #endif
 
+#if SVC_HW_VERSION != 2560
 // ====== Button Defines ======
 #define BUTTON_1          0x01
 #define BUTTON_2          0x02
@@ -171,6 +176,7 @@ typedef enum {
 #define BUTTON_WAIT_NONE       0  // do not wait, return value immediately
 #define BUTTON_WAIT_RELEASE    1  // wait until button is release
 #define BUTTON_WAIT_HOLD       2  // wait until button hold time expires
+#endif
 
 // ====== Timing Defines ======
 #define DISPLAY_MSG_MS      2000  // message display time (milliseconds)

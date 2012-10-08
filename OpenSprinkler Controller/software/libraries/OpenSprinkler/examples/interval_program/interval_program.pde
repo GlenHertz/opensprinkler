@@ -25,8 +25,10 @@
 
 // NTP sync interval (in seconds)
 #define NTP_SYNC_INTERVAL       86400L  // 24 hours default
+#if SVC_HW_VERSION != 2560
 // RC sync interval (in seconds)
 #define RTC_SYNC_INTERVAL       60     // 1 minute default
+#endif
 // Interval for checking network connection (in seconds)
 #define CHECK_NETWORK_INTERVAL  60     // 1 minute default
 // Ping test time out (in milliseconds)
@@ -36,7 +38,7 @@
 // ====== Ethernet defines ======
 byte mymac[] = { 0x00,0x69,0x69,0x2D,0x30,0x30 }; // mac address
 byte ntpip[] = {204,9,54,119};                    // Default NTP server ip
-uint8_t ntpclientportL = 123;                           // Default NTP client port
+uint8_t ntpclientportL = 123;                     // Default NTP client port
 int myport;
 
 byte Ethernet::buffer[ETHER_BUFFER_SIZE]; // Ethernet packet buffer
@@ -47,9 +49,12 @@ BufferFiller bfill;                       // buffer filler
 OpenSprinkler svc;    // OpenSprinkler object
 ProgramData pd;       // ProgramdData object 
 
+#if SVC_HW_VERSION != 2560
 // ====== UI defines ======
 static char ui_anim_chars[3] = {'.', 'o', 'O'};
+#endif
   
+#if SVC_HW_VERSION != 2560
 // poll button press
 void button_poll() {
 
@@ -96,20 +101,24 @@ void button_poll() {
     break;
   }
 }
+#endif
 
 // ======================
 // Arduino Setup Function
 // ======================
 void setup() { 
 
+  Serial.begin(9600);
   svc.begin();          // OpenSprinkler init
   svc.options_setup();  // Setup options
   pd.init();            // ProgramData init
   // calculate http port number
   myport = (int)(svc.options[OPTION_HTTPPORT_1].value<<8) + (int)svc.options[OPTION_HTTPPORT_0].value;
 
+#if SVC_HW_VERSION != 2560
   svc.lcd_print_line_clear_pgm(PSTR("Connecting to"), 0);
   svc.lcd_print_line_clear_pgm(PSTR(" the network..."), 1);  
+#endif
     
   if (svc.start_network(mymac, myport)) {  // initialize network
     svc.status.network_fails = 0;
@@ -117,17 +126,19 @@ void setup() {
 
   delay(500);
   
-  setSyncInterval(RTC_SYNC_INTERVAL);  // RTC sync interval: 1 minutes
+#if SVC_HW_VERSION != 2560
+  setSyncInterval(RTC_SYNC_INTERVAL);  // RTC sync interval: 1 minute
 
   // if rtc exists, sets it as time sync source
   setSyncProvider(svc.status.has_rtc ? RTC.get : NULL);
-
+#endif
   svc.apply_all_station_bits(); // reset station bits
   
   perform_ntp_sync(now());
   
+#if SVC_HW_VERSION != 2560
   svc.lcd_print_time(0);  // display time to LCD
-
+#endif
   //wdt_enable(WDTO_4S);  // enabled watchdog timer
 }
 
@@ -157,7 +168,9 @@ void loop()
   }
   // ======================================
  
+#if SVC_HW_VERSION != 2560
   button_poll();    // process button press
+#endif
 
 
   // if 1 second has passed
@@ -165,7 +178,9 @@ void loop()
   if (last_time != curr_time) {
 
     last_time = curr_time;
+#if SVC_HW_VERSION != 2560
     svc.lcd_print_time(0);       // print time
+#endif
 
     // ====== Check raindelay status ======
     if (svc.status.rain_delayed) {
@@ -326,12 +341,15 @@ void loop()
     // activate/deactivate valves
     svc.apply_all_station_bits();
     
+#if SVC_HW_VERSION != 2560
     // process LCD display
     svc.lcd_print_station(1, ui_anim_chars[curr_time%3]);
+#endif
     
     // check network connection
     check_network(curr_time);
     
+    svc.serial_print_ip(ether.myip, ether.hisport);
     // perform ntp sync
     perform_ntp_sync(curr_time);
   }
@@ -368,7 +386,9 @@ void perform_ntp_sync(time_t curr_time) {
     unsigned long t = getNtpTime();   
     if (t>0) {    
       setTime(t);
+#if SVC_HW_VERSION != 2560
       if (svc.status.has_rtc) RTC.set(t); // if rtc exists, update rtc
+#endif
     }
   }
 }
@@ -398,7 +418,9 @@ void check_network(time_t curr_time) {
     else svc.status.network_fails=0;
     // if failed more than 4 times in a row, reconnect
     if (svc.status.network_fails>4&&svc.options[OPTION_NETFAIL_RECONNECT].value) {
+#if SVC_HW_VERSION != 2560
       svc.lcd_print_line_clear_pgm(PSTR("Reconnecting..."),0);
+#endif
       svc.start_network(mymac, myport);
       //svc.status.network_fails=0;
     }

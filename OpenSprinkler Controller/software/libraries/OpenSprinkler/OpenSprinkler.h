@@ -47,7 +47,9 @@ class OpenSprinkler {
 public:
   
   // ====== Data Members ======
+#if SVC_HW_VERSION != 2560
   static LiquidCrystal lcd;
+#endif
   static StatusBits status;
   static byte nboards, nstations;
   
@@ -94,6 +96,9 @@ public:
   static void eeprom_string_set(int start_addr, char* buf);
   static void eeprom_string_get(int start_addr, char* buf);
     
+#if SVC_HW_VERSION == 2560
+  static void serial_print_ip(const byte *ip, int http_port);// print ip and port number
+#else
   // -- LCD functions --
   static void lcd_print_pgm(PGM_P PROGMEM str);           // print a program memory string
   static void lcd_print_line_clear_pgm(PGM_P PROGMEM str, byte line);
@@ -115,6 +120,7 @@ private:
   static void lcd_print_option(int i);  // print an option to the lcd
   static void lcd_print_2digit(int v);  // print a integer in 2 digits
   static byte button_read_busy(int value, byte waitmode, byte butt, byte is_holding);
+#endif
 };
 
 #endif
