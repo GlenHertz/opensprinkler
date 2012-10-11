@@ -15,11 +15,17 @@
 #endif
 
 #include <avr/eeprom.h>
-#include "Wire.h"
 #include "Time.h"
+#if SVC_HW_VERSION != 2560
+#include "Wire.h"
 #include "DS1307RTC.h"
 #include "LiquidCrystal.h"
 #include "EtherCard.h"
+#else
+// Using Wiznet W5100 Ethernet shield:
+#include <SPI.h>
+#include <Ethernet.h>
+#endif
 #include "defines.h"
 
 // Option Data Structure
@@ -98,6 +104,9 @@ public:
     
 #if SVC_HW_VERSION == 2560
   static void serial_print_ip(const byte *ip, int http_port);// print ip and port number
+  static void serial_print_time(byte line);                  // print current time
+private:
+  static void serial_print_2digit(int v);  // print a integer in 2 digits
 #else
   // -- LCD functions --
   static void lcd_print_pgm(PGM_P PROGMEM str);           // print a program memory string

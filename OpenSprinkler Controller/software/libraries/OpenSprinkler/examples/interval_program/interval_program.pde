@@ -36,6 +36,7 @@
 
 
 // ====== Ethernet defines ======
+EthernetServer ether = EthernetServer(80);
 byte mymac[] = { 0x00,0x69,0x69,0x2D,0x30,0x30 }; // mac address
 byte ntpip[] = {204,9,54,119};                    // Default NTP server ip
 uint8_t ntpclientportL = 123;                     // Default NTP client port
@@ -109,8 +110,12 @@ void button_poll() {
 void setup() { 
 
   Serial.begin(9600);
+  Serial.println("Starting OpenSprinkler:");
+  Serial.println("  - reseting hardware...");
   svc.begin();          // OpenSprinkler init
+  Serial.println("  - restore options setup...");
   svc.options_setup();  // Setup options
+  Serial.println("  - reset program data...");
   pd.init();            // ProgramData init
   // calculate http port number
   myport = (int)(svc.options[OPTION_HTTPPORT_1].value<<8) + (int)svc.options[OPTION_HTTPPORT_0].value;
@@ -119,11 +124,16 @@ void setup() {
   svc.lcd_print_line_clear_pgm(PSTR("Connecting to"), 0);
   svc.lcd_print_line_clear_pgm(PSTR(" the network..."), 1);  
 #endif
+  Serial.print("Connecting to the network...");
     
   if (svc.start_network(mymac, myport)) {  // initialize network
     svc.status.network_fails = 0;
-  } else  svc.status.network_fails = 1;
-
+    svc.serial_print_ip(ether.myip, ether.hisport);
+    Serial.println(" [PASS]");
+  } else {
+    svc.status.network_fails = 1;
+    Serial.println(" [FAIL]");
+  }
   delay(500);
   
 #if SVC_HW_VERSION != 2560
@@ -138,6 +148,8 @@ void setup() {
   
 #if SVC_HW_VERSION != 2560
   svc.lcd_print_time(0);  // display time to LCD
+#else
+  svc.serial_print_time(0);  // display time to LCD
 #endif
   //wdt_enable(WDTO_4S);  // enabled watchdog timer
 }

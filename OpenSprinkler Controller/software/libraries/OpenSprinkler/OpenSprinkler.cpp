@@ -11,7 +11,9 @@
 #if SVC_HW_VERSION != 2560
 LiquidCrystal OpenSprinkler::lcd(PIN_LCD_RS, PIN_LCD_EN, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 #else
-  int zone_pins[] = {39, 41, 43, 45, 47, 49, 51, 53};
+  // Pins on Arduino to control relays for sprinkler values:
+  // Note: don't use pins 50 to 53 (used Ethernet Shield)
+  int zone_pins[] = {33, 35, 37, 39, 41, 43, 45, 47};  
   int numZones = 8;
 #endif
 StatusBits OpenSprinkler::status;
@@ -110,6 +112,8 @@ void(* resetFunc) (void) = 0;
 // Initialize network with the given mac address and http port
 byte OpenSprinkler::start_network(byte mymac[], int http_port) {
 
+#if SVC_HW_VERSION != 2560
+  if(!Ethernet.begin(mymac)) return 0;
   if(!ether.begin(ETHER_BUFFER_SIZE, mymac))  return 0;
   ether.hisport = http_port;    
   
@@ -130,6 +134,57 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
       options[OPTION_GATEWAY_IP4].value};
     if (!ether.staticSetup(staticip, gateway))  return 0;
   }
+#else
+  if (options[OPTION_USE_DHCP].value) {
+    Serial.println("C1");
+    // register with domain name "opensprinkler"
+    Serial.print("   - Trying to get IP address through DHCP...");
+    if (!Ethernet.begin(mymac)) {
+      Serial.println(" [FAIL]");
+      return 0;
+    }
+    for (byte thisByte = 0; thisByte < 4; thisByte++) {
+      // print the value of each byte of the IP address:
+      Serial.print(Ethernet.localIP()[thisByte], DEC);
+      Serial.print("."); 
+    }
+    Serial.println(" [PASS]");
+  } else {
+    Serial.print("   - Configuring static IP address ");
+    Serial.print(options[OPTION_STATIC_IP1].value);
+    Serial.print(".");
+    Serial.print(options[OPTION_STATIC_IP2].value);
+    Serial.print(".");
+    Serial.print(options[OPTION_STATIC_IP3].value);
+    Serial.print(".");
+    Serial.print(options[OPTION_STATIC_IP4].value);
+    Serial.print(" ...");
+    byte staticip[] = {
+      options[OPTION_STATIC_IP1].value,
+      options[OPTION_STATIC_IP2].value,
+      options[OPTION_STATIC_IP3].value,
+      options[OPTION_STATIC_IP4].value};
+
+    byte gateway[] = {
+      options[OPTION_GATEWAY_IP1].value,
+      options[OPTION_GATEWAY_IP2].value,
+      options[OPTION_GATEWAY_IP3].value,
+      options[OPTION_GATEWAY_IP4].value};
+    byte dns[] = {8,8,8,8};  // Google by default
+    Serial.println("D");
+    if (!Ethernet.begin(mymac, staticip, dns, gateway)) {
+      Serial.println(" [FAIL]");
+      return 0;
+    }
+    for (byte thisByte = 0; thisByte < 4; thisByte++) {
+      // print the value of each byte of the IP address:
+      Serial.print(Ethernet.localIP()[thisByte], DEC);
+      Serial.print("."); 
+    }
+    Serial.println(" [PASS]");
+  }
+  ether.begin();  // Start listening for clients
+#endif
   return 1;
 }
 
@@ -524,6 +579,27 @@ void OpenSprinkler::lcd_print_line_clear_pgm(PGM_P PROGMEM str, byte line) {
   for(; (16-cnt) >= 0; cnt ++) lcd_print_pgm(PSTR(" "));  
 }
 #endif
+
+// Print time to a given line
+void OpenSprinkler::serial_print_time(byte line)
+{
+  time_t t=now();
+  serial_print_2digit(hour(t));
+  Serial.print((":"));
+  serial_print_2digit(minute(t));
+  Serial.print(("  "));
+  Serial.print(days_str[weekday_today()]);
+  Serial.print((" "));
+  serial_print_2digit(month(t));
+  Serial.print(("-"));
+  serial_print_2digit(day(t));
+  Serial.println("");
+}
+void OpenSprinkler::serial_print_2digit(int v)
+{
+  Serial.print((int)(v/10));
+  Serial.print((int)(v%10));
+}
 
 #if SVC_HW_VERSION != 2560
 void OpenSprinkler::lcd_print_2digit(int v)
