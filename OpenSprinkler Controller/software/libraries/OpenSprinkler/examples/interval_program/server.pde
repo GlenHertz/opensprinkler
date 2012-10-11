@@ -15,6 +15,56 @@ extern char tmp_buffer[];
 extern OpenSprinkler svc;
 extern ProgramData pd;
 
+// finKeyVal is from the enc28j60 and ip code (which is GPL v2)
+//      Author: Pascal Stang 
+//      Modified by: Guido Socher
+//      DHCP code: Andrew Lindsay
+//
+// 2010-05-19 <jc@wippler.nl>
+//
+// search for a string of the form key=value in
+// a string that looks like q?xyz=abc&uvw=defgh HTTP/1.1\r\n
+//
+// The returned value is stored in strbuf. You must allocate
+// enough storage for strbuf, maxlen is the size of strbuf.
+// I.e the value it is declated with: strbuf[5]-> maxlen=5
+byte findKeyVal (const char *str, char *strbuf, byte maxlen, const char *key)
+{
+    byte found=0;
+    byte i=0;
+    const char *kp;
+    kp=key;
+    while(*str &&  *str!=' ' && *str!='\n' && found==0){
+        if (*str == *kp){
+            kp++;
+            if (*kp == '\0'){
+                str++;
+                kp=key;
+                if (*str == '='){
+                    found=1;
+                }
+            }
+        }else{
+            kp=key;
+        }
+        str++;
+    }
+    if (found==1){
+        // copy the value to a buffer and terminate it with '\0'
+        while(*str &&  *str!=' ' && *str!='\n' && *str!='&' && i<maxlen-1){
+            *strbuf=*str;
+            i++;
+            str++;
+            strbuf++;
+        }
+        *strbuf='\0';
+    }
+    // return the length of the value
+    return(i);
+}
+
+
+
 // ==================
 // JavaScript Strings
 // ==================
@@ -53,7 +103,7 @@ prog_uchar htmlReturnHome[] PROGMEM =
 boolean check_password(char *p)
 {
   if (svc.options[OPTION_IGNORE_PASSWORD].value)  return true;
-  if (!ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pw") || !svc.password_verify(tmp_buffer)) {
+  if (!findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pw") || !svc.password_verify(tmp_buffer)) {
     return false;
   }
   return true;
@@ -108,7 +158,7 @@ boolean print_webpage_change_stations(char *p)
   // process station names
   for(sid=0;sid<svc.nstations;sid++) {
     itoa(sid, tbuf2+1, 10);
-    if(ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
+    if(findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
       ether.urlDecode(tmp_buffer);
       svc.set_station_name(sid, tmp_buffer);
     }
@@ -118,7 +168,7 @@ boolean print_webpage_change_stations(char *p)
   tbuf2[0]='m';
   for(bid=0;bid<svc.nboards;bid++) {
     itoa(bid, tbuf2+1, 10);
-    if(ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
+    if(findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
       svc.masop_bits[bid] = atoi(tmp_buffer);
     }
   }
@@ -264,7 +314,7 @@ boolean print_webpage_modify_program(char *p) {
   p+=3;
   ether.urlDecode(p);
   
-  if (!ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid")) {
+  if (!findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid")) {
     return false;
   }
   int pid=atoi(tmp_buffer);
@@ -308,7 +358,7 @@ boolean print_webpage_delete_program(char *p) {
   // check password
   if(check_password(p)==false)  return false;
   
-  if (!ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid"))
+  if (!findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid"))
     return false;
     
   int pid=atoi(tmp_buffer);
@@ -347,14 +397,14 @@ boolean print_webpage_plot_program(char *p) {
   yy = year(t);  mm = month(t);  dd = day(t);
   devday = t/SECS_PER_DAY;  devmin = hour(t)*60+minute(t);
   
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "d")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "d")) {
     dd=atoi(tmp_buffer);
     if (dd==0)  dd=day(t);
   }
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "m")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "m")) {
     mm=atoi(tmp_buffer);
   }
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "y")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "y")) {
     yy=atoi(tmp_buffer);
   }
   
@@ -400,7 +450,7 @@ boolean print_webpage_change_program(char *p) {
   if(check_password(p)==false)  return false;
     
   // parse program index
-  if (!ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid")) {
+  if (!findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid")) {
     return false;
   }
   int pid=atoi(tmp_buffer);
@@ -540,24 +590,24 @@ boolean print_webpage_change_values(char *p)
   // if no password is attached, or password is incorrect
   if(check_password(p)==false)  return false;
 
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rsn")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rsn")) {
     reset_all_stations();
   }
 #define TIME_REBOOT_DELAY  10
 
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rbt") && atoi(tmp_buffer) > 0) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rbt") && atoi(tmp_buffer) > 0) {
     bfill.emit_p(PSTR("$F<meta http-equiv=\"refresh\" content=\"$D; url=/\">"), htmlOkHeader, TIME_REBOOT_DELAY);
     bfill.emit_p(PSTR("Rebooting..."));
     ether.httpServerReply(bfill.position());   
     svc.reboot();
   } 
   
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "en")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "en")) {
     if (tmp_buffer[0]=='1' && !svc.status.enabled)  svc.enable();
     else if (tmp_buffer[0]=='0' &&  svc.status.enabled)  svc.disable();
   }   
   
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "mm")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "mm")) {
     if (tmp_buffer[0]=='1' && !svc.status.manual_mode) {
       reset_all_stations();
       svc.status.manual_mode = 1;
@@ -567,7 +617,7 @@ boolean print_webpage_change_values(char *p)
       svc.status.manual_mode = 0;
     }
   }
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rd")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rd")) {
     int rd = atoi(tmp_buffer);
     if (rd>0) {
       svc.raindelay_start(rd);
@@ -598,7 +648,7 @@ boolean print_webpage_change_options(char *p)
     if (svc.options[oid].max==1)  svc.options[oid].value = 0;  // set a bool variable to 0 first
     char tbuf2[5] = {'o', 0, 0, 0, 0};
     itoa(oid, tbuf2+1, 10);
-    if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
+    if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
       if (svc.options[oid].max==1) {
         svc.options[oid].value = 1;  // if the bool variable is detected, set to 1
         continue;
@@ -613,7 +663,7 @@ boolean print_webpage_change_options(char *p)
     }
   }
   
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "loc")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "loc")) {
     ether.urlDecode(tmp_buffer);
     //svc.location_set(tmp_buffer);    
     svc.eeprom_string_set(ADDR_EEPROM_LOCATION, tmp_buffer);
@@ -626,9 +676,9 @@ boolean print_webpage_change_options(char *p)
 
   svc.options_save();
   
-  if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "npw")) {
+  if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "npw")) {
     char tbuf2[TMP_BUFFER_SIZE];
-    if (ether.findKeyVal(p, tbuf2, TMP_BUFFER_SIZE, "cpw") && strncmp(tmp_buffer, tbuf2, 16) == 0) {
+    if (findKeyVal(p, tbuf2, TMP_BUFFER_SIZE, "cpw") && strncmp(tmp_buffer, tbuf2, 16) == 0) {
       //svc.password_set(tmp_buffer);
       svc.eeprom_string_set(ADDR_EEPROM_PASSWORD, tmp_buffer);
       bfill.emit_p(PSTR("$F<script>alert(\"New password set.\");$F"), htmlOkHeader, htmlReturnHome);
@@ -688,7 +738,7 @@ boolean print_webpage_station_bits(char *p) {
       manual_station_off(sid);
     } else if ((*p)=='1') {
       int ontimer = 0;
-      if (ether.findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "t")) {
+      if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "t")) {
         ontimer = atoi(tmp_buffer);
         if (!(ontimer>=0))  return false;
       }
