@@ -7,6 +7,72 @@
 
 #include "OpenSprinkler.h"
 
+// BufferFiller is from the enc28j60 and ip code (which is GPL v2)
+//      Author: Pascal Stang 
+//      Modified by: Guido Socher
+//      DHCP code: Andrew Lindsay
+//
+// 2010-05-19 <jc@wippler.nl>
+// 2012-10-11 <glen.hertz@gmail.com>
+void BufferFiller::emit_p(PGM_P fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    for (;;) {
+        char c = pgm_read_byte(fmt++);
+        if (c == 0)
+            break;
+        if (c != '$') {
+            client.write(c);
+            continue;
+        }
+        c = pgm_read_byte(fmt++);
+        switch (c) {
+            case 'D':
+                //wtoa(va_arg(ap, word), (char*) ptr);  //ray
+                itoa(va_arg(ap, word), (char*) ptr, 10);
+                client.print(ptr);
+                break;
+            case 'L':
+                ultoa(va_arg(ap, long), (char*) ptr, 10);
+                client.print(ptr);
+                break;
+            case 'S':
+                strcpy((char*) ptr, va_arg(ap, const char*));
+                client.print(ptr);
+                break;
+            case 'F': {
+                PGM_P s = va_arg(ap, PGM_P);
+                char d;
+                while ((d = pgm_read_byte(s++)) != 0)
+                    client.write(d);
+                continue;
+            }
+            case 'E': {
+                byte* s = va_arg(ap, byte*);
+                char d;
+                while ((d = eeprom_read_byte(s++)) != 0)
+                    client.write(d);
+                continue;
+            }
+            default:
+                client.write(c);
+                continue;
+        }
+    }
+    va_end(ap);
+}
+void BufferFiller::emit_raw (const char* s, uint16_t n) { 
+  strncpy(ptr, s, n); 
+  client.print(ptr); 
+}
+void BufferFiller::emit_raw_p (PGM_P p, uint16_t n) { 
+  strncpy_P(ptr, p, n); 
+  client.print(ptr); 
+}
+
+char buffer_filler[TMP_BUFFER_SIZE+1];
+BufferFiller bfill = buffer_filler;
+
 // Declare static data members
 #if SVC_HW_VERSION != 2560
 LiquidCrystal OpenSprinkler::lcd(PIN_LCD_RS, PIN_LCD_EN, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
@@ -136,7 +202,6 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
   }
 #else
   if (options[OPTION_USE_DHCP].value) {
-    Serial.println("C1");
     // register with domain name "opensprinkler"
     Serial.print("   - Trying to get IP address through DHCP...");
     if (!Ethernet.begin(mymac)) {
@@ -171,7 +236,6 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
       options[OPTION_GATEWAY_IP3].value,
       options[OPTION_GATEWAY_IP4].value};
     byte dns[] = {8,8,8,8};  // Google by default
-    Serial.println("D");
     if (!Ethernet.begin(mymac, staticip, dns, gateway)) {
       Serial.println(" [FAIL]");
       return 0;
@@ -184,6 +248,7 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
     Serial.println(" [PASS]");
   }
   ether.begin();  // Start listening for clients
+  Udp.begin(ntpclientportL);  // Start UPD listener
 #endif
   return 1;
 }

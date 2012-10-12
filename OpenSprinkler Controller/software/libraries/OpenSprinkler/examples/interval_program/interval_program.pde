@@ -38,8 +38,11 @@
 // ====== Ethernet defines ======
 EthernetServer ether = EthernetServer(80);
 byte mymac[] = { 0x00,0x69,0x69,0x2D,0x30,0x30 }; // mac address
-byte ntpip[] = {204,9,54,119};                    // Default NTP server ip
-uint8_t ntpclientportL = 123;                     // Default NTP client port
+IPAdress ntpip(204,9,54,119);                    // Default NTP server ip
+uint8_t ntpclientportL = 123;                     // Default NTP client port (to listen to UDP packets)
+const int NTP_PACKET_SIZE = 48;                   // time is in first few bytes
+byte packetBuffer[NTP_PACKET_SIZE];               // to hold incoming/outgoing packets
+EthernetUDP = Udp;
 int myport;
 
 byte Ethernet::buffer[ETHER_BUFFER_SIZE]; // Ethernet packet buffer
@@ -129,10 +132,8 @@ void setup() {
   if (svc.start_network(mymac, myport)) {  // initialize network
     svc.status.network_fails = 0;
     svc.serial_print_ip(ether.myip, ether.hisport);
-    Serial.println(" [PASS]");
   } else {
     svc.status.network_fails = 1;
-    Serial.println(" [FAIL]");
   }
   delay(500);
   
@@ -170,7 +171,6 @@ void loop()
   //wdt_reset();  // reset watchdog timer
 
   // ====== Process Ethernet packets ======
-  int plen=0;
   pos=ether.packetLoop(ether.packetReceive());
   if (pos>0) {  // packet received
     bfill = ether.tcpOffset();

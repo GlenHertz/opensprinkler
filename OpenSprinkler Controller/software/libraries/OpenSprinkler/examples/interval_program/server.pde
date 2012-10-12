@@ -21,6 +21,7 @@ extern ProgramData pd;
 //      DHCP code: Andrew Lindsay
 //
 // 2010-05-19 <jc@wippler.nl>
+// 2012-10-11 <glen.hertz@gmail.com>
 //
 // search for a string of the form key=value in
 // a string that looks like q?xyz=abc&uvw=defgh HTTP/1.1\r\n
@@ -62,6 +63,25 @@ byte findKeyVal (const char *str, char *strbuf, byte maxlen, const char *key)
     // return the length of the value
     return(i);
 }
+
+// decode a url string e.g "hello%20joe" or "hello+joe" becomes "hello joe"
+void urlDecode (char *urlbuf)
+{
+    char c;
+    char *dst = urlbuf;
+    while ((c = *urlbuf) != 0) {
+        if (c == '+') c = ' ';
+        if (c == '%') {
+            c = *++urlbuf;
+            c = (h2int(c) << 4) | h2int(*++urlbuf);
+        }
+        *dst++ = c;
+        urlbuf++;
+    }
+    *dst = '\0';
+}
+
+
 
 
 
@@ -159,7 +179,7 @@ boolean print_webpage_change_stations(char *p)
   for(sid=0;sid<svc.nstations;sid++) {
     itoa(sid, tbuf2+1, 10);
     if(findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, tbuf2)) {
-      ether.urlDecode(tmp_buffer);
+      urlDecode(tmp_buffer);
       svc.set_station_name(sid, tmp_buffer);
     }
   }
@@ -205,7 +225,7 @@ void bfill_programdata_sub(byte start_index)
 // Javascript for printing program data subsection page
 boolean print_webpage_programdata_subsection(char *p) {
   p+=2;
-  ether.urlDecode(p);
+  urlDecode(p);
   
   byte ssid = ((*p)-'0')*PROGRAMDATA_SUBSECTION_SIZE;
   bfill.emit_p(PSTR("$F"), htmlOkHeader);
@@ -253,7 +273,7 @@ boolean print_webpage_view_runonce(char *str) {
 // server function to accept run-once program
 boolean print_webpage_change_runonce(char *p) {
   p+=3;
-  ether.urlDecode(p);
+  urlDecode(p);
   
   // check password
   if(check_password(p)==false)  return false;
@@ -312,7 +332,7 @@ boolean print_webpage_view_program(char *str) {
 // webpage for printing program modification page 
 boolean print_webpage_modify_program(char *p) {
   p+=3;
-  ether.urlDecode(p);
+  urlDecode(p);
   
   if (!findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "pid")) {
     return false;
@@ -353,7 +373,7 @@ boolean print_webpage_modify_program(char *p) {
 boolean print_webpage_delete_program(char *p) {
 
   p+=3;
-  ether.urlDecode(p);
+  urlDecode(p);
   
   // check password
   if(check_password(p)==false)  return false;
@@ -388,7 +408,7 @@ boolean print_webpage_delete_program(char *p) {
   =============================================*/
 boolean print_webpage_plot_program(char *p) {
   p+=3;
-  ether.urlDecode(p);
+  urlDecode(p);
   
   // yy,mm,dd are simulated date for graphical view
   // devdd is the device day
@@ -444,7 +464,7 @@ uint16_t parse_listdata(char **p) {
 boolean print_webpage_change_program(char *p) {
 
   p+=3;
-  ether.urlDecode(p);
+  urlDecode(p);
   
   // check password
   if(check_password(p)==false)  return false;
@@ -598,7 +618,6 @@ boolean print_webpage_change_values(char *p)
   if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "rbt") && atoi(tmp_buffer) > 0) {
     bfill.emit_p(PSTR("$F<meta http-equiv=\"refresh\" content=\"$D; url=/\">"), htmlOkHeader, TIME_REBOOT_DELAY);
     bfill.emit_p(PSTR("Rebooting..."));
-    ether.httpServerReply(bfill.position());   
     svc.reboot();
   } 
   
@@ -664,7 +683,7 @@ boolean print_webpage_change_options(char *p)
   }
   
   if (findKeyVal(p, tmp_buffer, TMP_BUFFER_SIZE, "loc")) {
-    ether.urlDecode(tmp_buffer);
+    urlDecode(tmp_buffer);
     //svc.location_set(tmp_buffer);    
     svc.eeprom_string_set(ADDR_EEPROM_LOCATION, tmp_buffer);
   }
@@ -783,14 +802,26 @@ unsigned long ntp_wait_response()
   uint32_t time;
   unsigned long start = millis();
   do {
-    ether.packetLoop(ether.packetReceive());
-    if (ether.ntpProcessAnswer(&time, ntpclientportL))
+    sendNTPPacket(timeServer);
+    if (Udp.parsePacket()) 
+ether.ntpProcessAnswer(&time, ntpclientportL))
     {
-      if ((time & 0x80000000UL) ==0){
-        time+=2085978496;
+      Udp.read(packetBuffer, NTP_PACKET_SIZE); // read packet into buffer
+      // the timestamp starts at byte 40, convert 4 bytes into long integer
+      unsigned long hi = word(packetBuffer[40], packetBuffer[41]);
+      unsigned long lo = word(packetBuffer[42], packetBuffer[43]);
+      unsigned long ntpSecs = hi << 16 | low; 
+      // ntp to unix timestamp:
+      // Unix time starts on Jan 1, 1970
+      // 1) NTP Era 0 (Epoch is Jan 1 00:00:00 UTC 1900)
+      //    - Last value given 32 bits (4294967295) is Feb 7 06:28:15 UTC 2036
+      if ((time & 0x80000000UL) !=0){
+        time-=2208988800UL;  // remove 70 years
       }else{
-        time-=2208988800UL;
+      // 2) NTP Era 1 (Epoch is Feb 7 06:28:16 UTC 2036)
+        time+=2085978496;
       }
+      // adjust to timezone
       return time + (int32_t)3600/4*(int32_t)(svc.options[OPTION_TIMEZONE].value-48);
     }
   } while(millis() - start < 1000); // wait at most 1 seconds for ntp result
