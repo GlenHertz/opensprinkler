@@ -804,7 +804,6 @@ unsigned long ntp_wait_response()
   do {
     sendNTPPacket(timeServer);
     if (Udp.parsePacket()) 
-ether.ntpProcessAnswer(&time, ntpclientportL))
     {
       Udp.read(packetBuffer, NTP_PACKET_SIZE); // read packet into buffer
       // the timestamp starts at byte 40, convert 4 bytes into long integer
@@ -819,9 +818,9 @@ ether.ntpProcessAnswer(&time, ntpclientportL))
         time-=2208988800UL;  // remove 70 years
       }else{
       // 2) NTP Era 1 (Epoch is Feb 7 06:28:16 UTC 2036)
-        time+=2085978496;
+        time+=2085978496UL;  // add 66 years, 5 weeks
       }
-      // adjust to timezone
+      // adjust for timezone
       return time + (int32_t)3600/4*(int32_t)(svc.options[OPTION_TIMEZONE].value-48);
     }
   } while(millis() - start < 1000); // wait at most 1 seconds for ntp result
@@ -833,9 +832,8 @@ unsigned long getNtpTime()
   byte tick = 0;
   do
   {
-    ether.ntpRequest(ntpip, ++ntpclientportL);
-    delay(250);
     ans = ntp_wait_response();
+    delay(250);
     tick ++;
   } 
   while( ans == 0 && tick < 5 );  

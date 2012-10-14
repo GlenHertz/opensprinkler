@@ -34,6 +34,10 @@
 
 // ====== Ethernet defines ======
 EthernetServer server = EthernetServer(80);
+EthernetClient client = EthernetClient(80);
+char weather_host[] = "weather.yahooapis.com";
+char weather_query[] = "/forecastrss?w=29375164&u=c";
+
 byte mymac[] = { 0x00,0x69,0x69,0x2D,0x30,0x30 }; // mac address
 IPAdress ntpip(204,9,54,119);                    // Default NTP server ip
 uint8_t ntpclientportL = 123;                     // Default NTP client port (to listen to UDP packets)
@@ -336,22 +340,26 @@ void check_network(time_t curr_time) {
   // check network condition periodically
   if (curr_time - last_check_time > CHECK_NETWORK_INTERVAL) {
     last_check_time = curr_time;
-   
-    // ping gateway ip
-    ether.clientIcmpRequest(ether.gwip);
-    
+
+    Serial.print(F("Checking network connection..."));
     unsigned long start = millis();
     boolean failed = true;
     // wait at most PING_TIMEOUT milliseconds for ping result
     do {
-      ether.packetLoop(ether.packetReceive());
-      if (ether.packetLoopIcmpCheckReply(ether.gwip)) {
-        failed = false;
-        break;
+      if (client.connect(F("google.com"), 80)) {
+         client.stop();
+         failed = false;
+         Serial.println(F("[PASS]");
+         break;
       }
     } while(millis() - start < PING_TIMEOUT);
-    if (failed)  svc.status.network_fails++;
-    else svc.status.network_fails=0;
+    if (failed) 
+    { 
+      svc.status.network_fails++;
+      Serial.println(F("[PASS]");
+    } else {
+      svc.status.network_fails=0;
+    }
     // if failed more than 4 times in a row, reconnect
     if (svc.status.network_fails>4&&svc.options[OPTION_NETFAIL_RECONNECT].value) {
       Serial.print(F("Reconnecting..."));

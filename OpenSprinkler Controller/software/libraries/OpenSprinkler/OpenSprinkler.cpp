@@ -22,7 +22,7 @@ void BufferFiller::emit_p(PGM_P fmt, ...) {
         if (c == 0)
             break;
         if (c != '$') {
-            client.write(c);
+            server.write(c);
             continue;
         }
         c = pgm_read_byte(fmt++);
@@ -30,32 +30,32 @@ void BufferFiller::emit_p(PGM_P fmt, ...) {
             case 'D':
                 //wtoa(va_arg(ap, word), (char*) ptr);  //ray
                 itoa(va_arg(ap, word), (char*) ptr, 10);
-                client.print(ptr);
+                server.print(ptr);
                 break;
             case 'L':
                 ultoa(va_arg(ap, long), (char*) ptr, 10);
-                client.print(ptr);
+                server.print(ptr);
                 break;
             case 'S':
                 strcpy((char*) ptr, va_arg(ap, const char*));
-                client.print(ptr);
+                server.print(ptr);
                 break;
             case 'F': {
                 PGM_P s = va_arg(ap, PGM_P);
                 char d;
                 while ((d = pgm_read_byte(s++)) != 0)
-                    client.write(d);
+                    server.write(d);
                 continue;
             }
             case 'E': {
                 byte* s = va_arg(ap, byte*);
                 char d;
                 while ((d = eeprom_read_byte(s++)) != 0)
-                    client.write(d);
+                    server.write(d);
                 continue;
             }
             default:
-                client.write(c);
+                server.write(c);
                 continue;
         }
     }
@@ -63,11 +63,11 @@ void BufferFiller::emit_p(PGM_P fmt, ...) {
 }
 void BufferFiller::emit_raw (const char* s, uint16_t n) { 
   strncpy(ptr, s, n); 
-  client.print(ptr); 
+  server.print(ptr); 
 }
 void BufferFiller::emit_raw_p (PGM_P p, uint16_t n) { 
   strncpy_P(ptr, p, n); 
-  client.print(ptr); 
+  server.print(ptr); 
 }
 
 char buffer_filler[TMP_BUFFER_SIZE+1];
@@ -219,7 +219,7 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
     }
     Serial.println(" [PASS]");
   }
-  ether.begin();  // Start listening for clients
+  server.begin();  // Start listening for clients
   Udp.begin(ntpclientportL);  // Start UPD listener
   return 1;
 }
@@ -504,18 +504,6 @@ void OpenSprinkler::lcd_print_time(byte line)
   lcd_print_2digit(month(t));
   lcd_print_pgm(PSTR("-"));
   lcd_print_2digit(day(t));
-}
-
-// print ip address and port
-void OpenSprinkler::serial_print_ip(const byte *ip, int http_port) {
-  for (byte i=0; i<3; i++) {
-    Serial.print((int)ip[i]); 
-    Serial.print(".");
-  }   
-  Serial.print((int)ip[3]);
-  Serial.print(":");
-  Serial.print(http_port);
-  Serial.print("");
 }
 
 void OpenSprinkler::serial_print_status() {
