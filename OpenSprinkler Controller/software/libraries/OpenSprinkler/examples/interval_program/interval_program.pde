@@ -25,10 +25,7 @@
 
 // NTP sync interval (in seconds)
 #define NTP_SYNC_INTERVAL       86400L  // 24 hours default
-#if SVC_HW_VERSION != 2560
-// RC sync interval (in seconds)
 #define RTC_SYNC_INTERVAL       60     // 1 minute default
-#endif
 // Interval for checking network connection (in seconds)
 #define CHECK_NETWORK_INTERVAL  60     // 1 minute default
 // Ping test time out (in milliseconds)
@@ -53,59 +50,8 @@ BufferFiller bfill;                       // buffer filler
 OpenSprinkler svc;    // OpenSprinkler object
 ProgramData pd;       // ProgramdData object 
 
-#if SVC_HW_VERSION != 2560
 // ====== UI defines ======
 static char ui_anim_chars[3] = {'.', 'o', 'O'};
-#endif
-  
-#if SVC_HW_VERSION != 2560
-// poll button press
-void button_poll() {
-
-  // read button, if something is pressed, wait till release
-  byte button = svc.button_read(BUTTON_WAIT_HOLD);
-
-  if (!(button & BUTTON_FLAG_DOWN)) return;  // repond only to button down events
-
-  switch (button & BUTTON_MASK) {
-  case BUTTON_1:
-    if (button & BUTTON_FLAG_HOLD) {
-      // hold button 1 -> start operation
-      svc.enable();
-    } 
-    else {
-      // click button 1 -> display ip address and port number
-      svc.lcd_print_ip(ether.myip, ether.hisport);
-      delay(DISPLAY_MSG_MS);
-    }
-    break;
-
-  case BUTTON_2:
-    if (button & BUTTON_FLAG_HOLD) {
-      // hold button 2 -> disable operation
-      svc.disable();
-    } 
-    else {
-      // click button 2 -> display gateway ip address and port number
-      svc.lcd_print_ip(ether.gwip, 0);
-      delay(DISPLAY_MSG_MS);
-    }
-    break;
-
-  case BUTTON_3:
-    if (button & BUTTON_FLAG_HOLD) {
-      // hold button 3 -> reboot
-      svc.button_read(BUTTON_WAIT_RELEASE);
-      svc.reboot();
-    } 
-    else {
-      // click button 3 -> switch board display (cycle through master and all extension boards)
-      svc.status.display_board = (svc.status.display_board + 1) % (svc.nboards);
-    }
-    break;
-  }
-}
-#endif
 
 // ======================
 // Arduino Setup Function
@@ -123,10 +69,6 @@ void setup() {
   // calculate http port number
   myport = (int)(svc.options[OPTION_HTTPPORT_1].value<<8) + (int)svc.options[OPTION_HTTPPORT_0].value;
 
-#if SVC_HW_VERSION != 2560
-  svc.lcd_print_line_clear_pgm(PSTR("Connecting to"), 0);
-  svc.lcd_print_line_clear_pgm(PSTR(" the network..."), 1);  
-#endif
   Serial.print("Connecting to the network...");
     
   if (svc.start_network(mymac, myport)) {  // initialize network
@@ -137,23 +79,11 @@ void setup() {
   }
   delay(500);
   
-#if SVC_HW_VERSION != 2560
-  setSyncInterval(RTC_SYNC_INTERVAL);  // RTC sync interval: 1 minute
-
-  // if rtc exists, sets it as time sync source
-  setSyncProvider(svc.status.has_rtc ? RTC.get : NULL);
-#endif
   svc.apply_all_station_bits(); // reset station bits
   
   perform_ntp_sync(now());
   
-#if SVC_HW_VERSION != 2560
-  svc.lcd_print_time(0);  // display time to LCD
-#else
-  svc.serial_print_time(0);  // display time to LCD
-#endif
-  //wdt_enable(WDTO_4S);  // enabled watchdog timer
-}
+  svc.serial_print_time();  // display time to LCD
 
 // =================
 // Arduino Main Loop
@@ -180,19 +110,13 @@ void loop()
   }
   // ======================================
  
-#if SVC_HW_VERSION != 2560
-  button_poll();    // process button press
-#endif
-
 
   // if 1 second has passed
   time_t curr_time = now();
   if (last_time != curr_time) {
 
     last_time = curr_time;
-#if SVC_HW_VERSION != 2560
-    svc.lcd_print_time(0);       // print time
-#endif
+    svc.serial_print_time();       // print time
 
     // ====== Check raindelay status ======
     if (svc.status.rain_delayed) {
@@ -353,10 +277,7 @@ void loop()
     // activate/deactivate valves
     svc.apply_all_station_bits();
     
-#if SVC_HW_VERSION != 2560
-    // process LCD display
-    svc.lcd_print_station(1, ui_anim_chars[curr_time%3]);
-#endif
+    svc.serial_print_station(1, ui_anim_chars[curr_time%3]);
     
     // check network connection
     check_network(curr_time);
@@ -398,9 +319,6 @@ void perform_ntp_sync(time_t curr_time) {
     unsigned long t = getNtpTime();   
     if (t>0) {    
       setTime(t);
-#if SVC_HW_VERSION != 2560
-      if (svc.status.has_rtc) RTC.set(t); // if rtc exists, update rtc
-#endif
     }
   }
 }
@@ -430,9 +348,7 @@ void check_network(time_t curr_time) {
     else svc.status.network_fails=0;
     // if failed more than 4 times in a row, reconnect
     if (svc.status.network_fails>4&&svc.options[OPTION_NETFAIL_RECONNECT].value) {
-#if SVC_HW_VERSION != 2560
-      svc.lcd_print_line_clear_pgm(PSTR("Reconnecting..."),0);
-#endif
+      Serial.print(F("Reconnecting..."));
       svc.start_network(mymac, myport);
       //svc.status.network_fails=0;
     }

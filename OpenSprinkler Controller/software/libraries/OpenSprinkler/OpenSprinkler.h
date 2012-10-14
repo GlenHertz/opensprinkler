@@ -8,25 +8,14 @@
 #ifndef _OpenSprinkler_h
 #define _OpenSprinkler_h
 
-#if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
-#else
-#include "WProgram.h"
-#endif
 
 #include <avr/eeprom.h>
 #include "Time.h"
-#if SVC_HW_VERSION != 2560
-#include "Wire.h"
-#include "DS1307RTC.h"
-#include "LiquidCrystal.h"
-#include "EtherCard.h"
-#else
 // Using Wiznet W5100 Ethernet shield:
 #include <SPI.h>
 #include <Ethernet.h>
 #include <EthernetUDP.h>
-#endif
 #include "defines.h"
 
 // Option Data Structure
@@ -54,9 +43,6 @@ class OpenSprinkler {
 public:
   
   // ====== Data Members ======
-#if SVC_HW_VERSION != 2560
-  static LiquidCrystal lcd;
-#endif
   static StatusBits status;
   static byte nboards, nstations;
   
@@ -103,34 +89,10 @@ public:
   static void eeprom_string_set(int start_addr, char* buf);
   static void eeprom_string_get(int start_addr, char* buf);
     
-#if SVC_HW_VERSION == 2560
   static void serial_print_ip(const byte *ip, int http_port);// print ip and port number
   static void serial_print_time(byte line);                  // print current time
 private:
   static void serial_print_2digit(int v);  // print a integer in 2 digits
-#else
-  // -- LCD functions --
-  static void lcd_print_pgm(PGM_P PROGMEM str);           // print a program memory string
-  static void lcd_print_line_clear_pgm(PGM_P PROGMEM str, byte line);
-  static void lcd_print_time(byte line);                  // print current time
-  static void lcd_print_ip(const byte *ip, int http_port);// print ip and port number
-  static void lcd_print_station(byte line, char c);       // print station bits of the board selected by display_board
-  static void lcd_print_status(); // print selected status bits
- 
-  // -- Button and UI functions --
-  static byte button_read(byte waitmode); // Read button value. options for 'waitmodes' are:
-                                          // BUTTON_WAIT_NONE, BUTTON_WAIT_RELEASE, BUTTON_WAIT_HOLD
-                                          // return values are 'OR'ed with flags
-                                          // check defines.h for details
-
-  // -- UI functions --
-  static void ui_set_options(int oid);    // ui for setting options (oid-> starting option index)
-
-private:
-  static void lcd_print_option(int i);  // print an option to the lcd
-  static void lcd_print_2digit(int v);  // print a integer in 2 digits
-  static byte button_read_busy(int value, byte waitmode, byte butt, byte is_holding);
-#endif
 };
 
 // BufferFiller is from the enc28j60 and ip code (which is GPL v2)
@@ -156,4 +118,3 @@ public:
 };
 
 
-#endif
