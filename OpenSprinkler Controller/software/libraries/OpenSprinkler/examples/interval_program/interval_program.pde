@@ -33,7 +33,7 @@
 
 
 // ====== Ethernet defines ======
-EthernetServer ether = EthernetServer(80);
+EthernetServer server = EthernetServer(80);
 byte mymac[] = { 0x00,0x69,0x69,0x2D,0x30,0x30 }; // mac address
 IPAdress ntpip(204,9,54,119);                    // Default NTP server ip
 uint8_t ntpclientportL = 123;                     // Default NTP client port (to listen to UDP packets)
@@ -45,6 +45,7 @@ int myport;
 byte Ethernet::buffer[ETHER_BUFFER_SIZE]; // Ethernet packet buffer
 char tmp_buffer[TMP_BUFFER_SIZE+1];       // scratch buffer
 BufferFiller bfill;                       // buffer filler
+char buffer[ETHER_BUFFER_SIZE+1];
 
 // ====== Object defines ======
 OpenSprinkler svc;    // OpenSprinkler object
@@ -73,7 +74,7 @@ void setup() {
     
   if (svc.start_network(mymac, myport)) {  // initialize network
     svc.status.network_fails = 0;
-    svc.serial_print_ip(ether.myip, ether.hisport);
+    Serial.println(Ethernet.localIP());
   } else {
     svc.status.network_fails = 1;
   }
@@ -83,7 +84,7 @@ void setup() {
   
   perform_ntp_sync(now());
   
-  svc.serial_print_time();  // display time to LCD
+  svc.serial_print_time();  // display time
 
 // =================
 // Arduino Main Loop
@@ -98,18 +99,23 @@ void loop()
   ProgramStruct prog;
 
   mas = svc.options[OPTION_MASTER_STATION].value;
-  //wdt_reset();  // reset watchdog timer
 
-  // ====== Process Ethernet packets ======
-  pos=ether.packetLoop(ether.packetReceive());
-  if (pos>0) {  // packet received
-    bfill = ether.tcpOffset();
-    analyze_get_url((char*)Ethernet::buffer+pos);
 
-    ether.httpServerReply(bfill.position());   
+  EthernetClient client = server.available();  // to respond to incoming requests
+  char *ptr = buffer; 
+  if (client) {
+    while (client.connected()) {
+      if (client.available()) {
+        memset(buffer, 0, sizeof(buffer));  // clear the buffer
+        client.readBytesUntil('\n', buffer, ETHER_BUFFER_SIZE) > 0)  // get first line of request
+        analyze_get_url(buffer);
+        break;
+      }
+    }
+    // give the web browser time to receive the data
+    // close the connection:
+    client.stop();
   }
-  // ======================================
- 
 
   // if 1 second has passed
   time_t curr_time = now();
@@ -282,7 +288,7 @@ void loop()
     // check network connection
     check_network(curr_time);
     
-    svc.serial_print_ip(ether.myip, ether.hisport);
+    svc.serial_print_ip(Ethernet.localIP());
     // perform ntp sync
     perform_ntp_sync(curr_time);
   }
