@@ -9,13 +9,13 @@
 #define _OpenSprinkler_h
 
 #include "Arduino.h"
+#define WRITE_RESULT size_t
+#define WRITE_RETURN return 1;
+
 
 #include <avr/eeprom.h>
 #include "Time.h"
 // Using Wiznet W5100 Ethernet shield:
-#include <SPI.h>
-#include <Ethernet.h>
-#include <EthernetUDP.h>
 #include "defines.h"
 
 // Option Data Structure
@@ -117,4 +117,4 @@ public:
   virtual WRITE_RESULT write (uint8_t v) { *ptr++ = v; WRITE_RETURN }
 };
 
-
+#endif

@@ -92,7 +92,7 @@ typedef enum {
 // ====== Ethernet Defines ======
 #define ETHER_BUFFER_SIZE     720 // if buffer size is increased, you must check the total RAM consumption
                                   // otherwise it may cause the program to crash
-#define TMP_BUFFER_SIZE        32 // scratch buffer size
+#define TMP_BUFFER_SIZE        48 // scratch buffer size
 
 #endif
 
