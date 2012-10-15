@@ -11,7 +11,7 @@
 extern uint8_t ntpclientportL;
 extern IPAddress ntpip;
 extern BufferFiller bfill;
-extern char tmp_buffer[];
+extern char tmp_buffer[TMP_BUFFER_SIZE+1];
 extern OpenSprinkler svc;
 extern ProgramData pd;
 extern void sendNTPpacket(IPAddress ip);

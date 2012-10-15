@@ -7,6 +7,9 @@
 
 #ifndef _OpenSprinkler_h
 #define _OpenSprinkler_h
+#include <SPI.h>
+#include <Ethernet.h>
+#include <EthernetUdp.h>
 
 #include "Arduino.h"
 #define WRITE_RESULT size_t
@@ -17,6 +20,10 @@
 #include "Time.h"
 // Using Wiznet W5100 Ethernet shield:
 #include "defines.h"
+
+extern EthernetServer server;
+extern char tmp_buffer[TMP_BUFFER_SIZE+1];
+
 
 // Option Data Structure
 struct OptionStruct{
@@ -102,20 +109,12 @@ private:
 //      Modified by: Glen Hertz (for use with W5100 Ethernet Shield)
 //
 // 2010-05-19 <jc@wippler.nl>
-class BufferFiller : public Print {
-  uint8_t *start, *ptr;
+class BufferFiller
+{
 public:
-  BufferFiller () {}
-  BufferFiller (uint8_t* buf) : start (buf), ptr (buf) {}
-      
   void emit_p (PGM_P fmt, ...);
   void emit_raw (const char* s, uint16_t n);
   void emit_raw_p (PGM_P p, uint16_t n);
-  
-  uint8_t* buffer () const { return start; }
-  uint16_t position () const { return ptr - start; }
-  
-  virtual WRITE_RESULT write (uint8_t v) { *ptr++ = v; WRITE_RETURN }
 };
 
 #endif

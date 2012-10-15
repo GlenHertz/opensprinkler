@@ -14,6 +14,7 @@
 #include <SPI.h>
 #include <Ethernet.h>
 #include <EthernetUdp.h>
+
 #include <OpenSprinkler.h>
 #include "program.h"
 
@@ -36,8 +37,8 @@
 
 
 // ====== Ethernet defines ======
-EthernetServer server = EthernetServer(80);
-EthernetClient client = EthernetClient(80);
+EthernetServer server = EthernetServer(80);  // to serve pages, listening for requests
+EthernetClient client = EthernetClient(80);  // to get data from the web (weather, etc)
 char weather_host[] = "weather.yahooapis.com";
 char weather_query[] = "/forecastrss?w=29375164&u=c";
 
@@ -56,6 +57,7 @@ char buffer[ETHER_BUFFER_SIZE+1];
 // ====== Object defines ======
 OpenSprinkler svc;    // OpenSprinkler object
 ProgramData pd;       // ProgramdData object 
+
 
 // ====== UI defines ======
 static char ui_anim_chars[3] = {'.', 'o', 'O'};

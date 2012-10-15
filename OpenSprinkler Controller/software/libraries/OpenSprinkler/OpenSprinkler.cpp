@@ -17,6 +17,8 @@
 void BufferFiller::emit_p(PGM_P fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+    char *ptr = tmp_buffer;
+    memset(ptr, 0, TMP_BUFFER_SIZE);
     for (;;) {
         char c = pgm_read_byte(fmt++);
         if (c == 0)
@@ -30,15 +32,15 @@ void BufferFiller::emit_p(PGM_P fmt, ...) {
             case 'D':
                 //wtoa(va_arg(ap, word), (char*) ptr);  //ray
                 itoa(va_arg(ap, word), (char*) ptr, 10);
-                server.print(ptr);
+                server.print(tmp_buffer);
                 break;
             case 'L':
                 ultoa(va_arg(ap, long), (char*) ptr, 10);
-                server.print(ptr);
+                server.print(tmp_buffer);
                 break;
             case 'S':
                 strcpy((char*) ptr, va_arg(ap, const char*));
-                server.print(ptr);
+                server.print(tmp_buffer);
                 break;
             case 'F': {
                 PGM_P s = va_arg(ap, PGM_P);
@@ -62,12 +64,16 @@ void BufferFiller::emit_p(PGM_P fmt, ...) {
     va_end(ap);
 }
 void BufferFiller::emit_raw (const char* s, uint16_t n) { 
+  char *ptr = tmp_buffer;
+  memset(ptr, 0, TMP_BUFFER_SIZE);
   strncpy(ptr, s, n); 
-  server.print(ptr); 
+  server.print(tmp_buffer); 
 }
 void BufferFiller::emit_raw_p (PGM_P p, uint16_t n) { 
+  char *ptr = tmp_buffer;
+  memset(ptr, 0, TMP_BUFFER_SIZE);
   strncpy_P(ptr, p, n); 
-  server.print(ptr); 
+  server.print(tmp_buffer); 
 }
 
 char buffer_filler[TMP_BUFFER_SIZE+1];
@@ -180,11 +186,8 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
       Serial.println(" [FAIL]");
       return 0;
     }
-    for (byte thisByte = 0; thisByte < 4; thisByte++) {
-      // print the value of each byte of the IP address:
-      Serial.print(Ethernet.localIP()[thisByte], DEC);
-      Serial.print("."); 
-    }
+    // print IP Address
+    Serial.print(Ethernet.localIP());
     Serial.println(" [PASS]");
   } else {
     Serial.print("   - Configuring static IP address ");
@@ -208,15 +211,11 @@ byte OpenSprinkler::start_network(byte mymac[], int http_port) {
       options[OPTION_GATEWAY_IP3].value,
       options[OPTION_GATEWAY_IP4].value};
     byte dns[] = {8,8,8,8};  // Google by default
-    if (!Ethernet.begin(mymac, staticip, dns, gateway)) {
-      Serial.println(" [FAIL]");
-      return 0;
+    Ethernet.begin(mymac, staticip, dns, gateway)
+    Serial.println(" [PASS]");
     }
-    for (byte thisByte = 0; thisByte < 4; thisByte++) {
-      // print the value of each byte of the IP address:
-      Serial.print(Ethernet.localIP()[thisByte], DEC);
-      Serial.print("."); 
-    }
+      // print IP Address
+    Serial.print(Ethernet.localIP());
     Serial.println(" [PASS]");
   }
   server.begin();  // Start listening for clients
