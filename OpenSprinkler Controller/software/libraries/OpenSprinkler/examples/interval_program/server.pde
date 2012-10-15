@@ -9,11 +9,12 @@
 
 // External variables defined in main pde file
 extern uint8_t ntpclientportL;
-extern byte ntpip[];
+extern IPAddress ntpip;
 extern BufferFiller bfill;
 extern char tmp_buffer[];
 extern OpenSprinkler svc;
 extern ProgramData pd;
+extern void sendNTPpacket(IPAddress ip);
 
 // finKeyVal is from the enc28j60 and ip code (which is GPL v2)
 //      Author: Pascal Stang 
@@ -63,6 +64,22 @@ byte findKeyVal (const char *str, char *strbuf, byte maxlen, const char *key)
     // return the length of the value
     return(i);
 }
+
+// convert a single hex digit character to its integer value
+unsigned char h2int(char c)
+{
+    if (c >= '0' && c <='9'){
+        return((unsigned char)c - '0');
+    }
+    if (c >= 'a' && c <='f'){
+        return((unsigned char)c - 'a' + 10);
+    }
+    if (c >= 'A' && c <='F'){
+        return((unsigned char)c - 'A' + 10);
+    }
+    return(0);
+}
+
 
 // decode a url string e.g "hello%20joe" or "hello+joe" becomes "hello joe"
 void urlDecode (char *urlbuf)
@@ -802,14 +819,14 @@ unsigned long ntp_wait_response()
   uint32_t time;
   unsigned long start = millis();
   do {
-    sendNTPPacket(timeServer);
+    sendNTPpacket(ntpip);
     if (Udp.parsePacket()) 
     {
       Udp.read(packetBuffer, NTP_PACKET_SIZE); // read packet into buffer
       // the timestamp starts at byte 40, convert 4 bytes into long integer
       unsigned long hi = word(packetBuffer[40], packetBuffer[41]);
       unsigned long lo = word(packetBuffer[42], packetBuffer[43]);
-      unsigned long ntpSecs = hi << 16 | low; 
+      unsigned long ntpSecs = hi << 16 | lo; 
       // ntp to unix timestamp:
       // Unix time starts on Jan 1, 1970
       // 1) NTP Era 0 (Epoch is Jan 1 00:00:00 UTC 1900)

@@ -491,21 +491,6 @@ void OpenSprinkler::serial_print_2digit(int v)
 }
 
 // Print time to a given line
-void OpenSprinkler::lcd_print_time(byte line)
-{
-  time_t t=now();
-  lcd.setCursor(0, line);
-  lcd_print_2digit(hour(t));
-  lcd_print_pgm(PSTR(":"));
-  lcd_print_2digit(minute(t));
-  lcd_print_pgm(PSTR("  "));
-  lcd_print_pgm(days_str[weekday_today()]);
-  lcd_print_pgm(PSTR(" "));
-  lcd_print_2digit(month(t));
-  lcd_print_pgm(PSTR("-"));
-  lcd_print_2digit(day(t));
-}
-
 void OpenSprinkler::serial_print_status() {
   if (status.network_fails > 0) 
   {
@@ -518,7 +503,7 @@ void OpenSprinkler::serial_print_status() {
 }
 
 // Print station bits
-void OpenSprinkler::serial_print_station(byte line, char c) {
+void OpenSprinkler::serial_print_station(char c) {
   if (status.display_board == 0) {
     Serial.print(F("MC:"));  // Master controller is display as 'MC'
   } else {
@@ -537,9 +522,9 @@ void OpenSprinkler::serial_print_station(byte line, char c) {
     byte bitvalue = station_bits[status.display_board];
     for (byte s=0; s<8; s++) {
       if (status.display_board == 0 &&(s+1) == options[OPTION_MASTER_STATION].value) {
-        lcd.print((bitvalue&1) ? (char)c : 'M'); // print master station
+        Serial.print((bitvalue&1) ? (char)c : 'M'); // print master station
       } else {
-        lcd.print((bitvalue&1) ? (char)c : '_');
+        Serial.print((bitvalue&1) ? (char)c : '_');
       }
       bitvalue >>= 1;
     }

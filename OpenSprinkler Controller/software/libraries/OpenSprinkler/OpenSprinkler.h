@@ -83,14 +83,15 @@ public:
   static void clear_all_station_bits(); // clear all station bits
   static void apply_all_station_bits(); // apply all station bits (activate/deactive values)
 
+  static void serial_print_station(char c);
+
   // -- String functions --
   //static void password_set(char *pw);     // save password to eeprom
   static byte password_verify(char *pw);  // verify password
   static void eeprom_string_set(int start_addr, char* buf);
   static void eeprom_string_get(int start_addr, char* buf);
     
-  static void serial_print_ip(const byte *ip, int http_port);// print ip and port number
-  static void serial_print_time(byte line);                  // print current time
+  static void serial_print_time();                  // print current time
 private:
   static void serial_print_2digit(int v);  // print a integer in 2 digits
 };

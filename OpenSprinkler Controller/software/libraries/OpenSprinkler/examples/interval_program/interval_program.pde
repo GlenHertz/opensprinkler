@@ -11,6 +11,9 @@
  */
 
 #include <limits.h>
+#include <SPI.h>
+#include <Ethernet.h>
+#include <EthernetUdp.h>
 #include <OpenSprinkler.h>
 #include "program.h"
 
@@ -39,14 +42,13 @@ char weather_host[] = "weather.yahooapis.com";
 char weather_query[] = "/forecastrss?w=29375164&u=c";
 
 byte mymac[] = { 0x00,0x69,0x69,0x2D,0x30,0x30 }; // mac address
-IPAdress ntpip(204,9,54,119);                    // Default NTP server ip
+IPAddress ntpip(204,9,54,119);                    // Default NTP server ip
 uint8_t ntpclientportL = 123;                     // Default NTP client port (to listen to UDP packets)
 const int NTP_PACKET_SIZE = 48;                   // time is in first few bytes
 byte packetBuffer[NTP_PACKET_SIZE];               // to hold incoming/outgoing packets
-EthernetUDP = Udp;
+EthernetUDP Udp;
 int myport;
 
-byte Ethernet::buffer[ETHER_BUFFER_SIZE]; // Ethernet packet buffer
 char tmp_buffer[TMP_BUFFER_SIZE+1];       // scratch buffer
 BufferFiller bfill;                       // buffer filler
 char buffer[ETHER_BUFFER_SIZE+1];
@@ -89,6 +91,7 @@ void setup() {
   perform_ntp_sync(now());
   
   svc.serial_print_time();  // display time
+}
 
 // =================
 // Arduino Main Loop
@@ -111,7 +114,7 @@ void loop()
     while (client.connected()) {
       if (client.available()) {
         memset(buffer, 0, sizeof(buffer));  // clear the buffer
-        client.readBytesUntil('\n', buffer, ETHER_BUFFER_SIZE) > 0)  // get first line of request
+        client.readBytesUntil('\n', buffer, ETHER_BUFFER_SIZE);  // get first line of request
         analyze_get_url(buffer);
         break;
       }
@@ -287,12 +290,12 @@ void loop()
     // activate/deactivate valves
     svc.apply_all_station_bits();
     
-    svc.serial_print_station(1, ui_anim_chars[curr_time%3]);
+    svc.serial_print_station((char)ui_anim_chars[curr_time%3]);
     
     // check network connection
     check_network(curr_time);
     
-    svc.serial_print_ip(Ethernet.localIP());
+    Serial.println(Ethernet.localIP());
     // perform ntp sync
     perform_ntp_sync(curr_time);
   }
@@ -346,17 +349,18 @@ void check_network(time_t curr_time) {
     boolean failed = true;
     // wait at most PING_TIMEOUT milliseconds for ping result
     do {
-      if (client.connect(F("google.com"), 80)) {
+      if (client.connect("google.com", 80)) 
+      {
          client.stop();
          failed = false;
-         Serial.println(F("[PASS]");
+         Serial.println(F("[PASS]"));
          break;
       }
     } while(millis() - start < PING_TIMEOUT);
     if (failed) 
     { 
       svc.status.network_fails++;
-      Serial.println(F("[PASS]");
+      Serial.println(F("[PASS]"));
     } else {
       svc.status.network_fails=0;
     }
