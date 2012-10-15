@@ -30,7 +30,7 @@ For the price difference I think the older revisions of the 2560 and W5100 are a
 
   - 8 channel, 5V relay extension board (`$12 <https://dx.com/p/8-channel-5v-relay-module-board-for-arduino-red-156424?item=5>`__ to `$16 <https://dx.com/p/8-channel-5v-relay-module-extension-board-for-arduino-avr-arm-51-140703?item=1>`__).
   - Jumper cables (male to female) 40 pieces ($3).  Ebay search: dupont wire color jumper cable male female 2.54mm
-  - For standoffs the regular 3mm threads are too large.  I'm drilling into a metal case and hoping to stack `plastic washers <http://www.ebay.com/itm/180677742101?ssPageName=STRK:MEWNX:IT&_trksid=p3984.m1439.l2649`__ to the right standoff height and use `2.5mm screws <http://www.ebay.com/itm/320975892026?ssPageName=STRK:MEWNX:IT&_trksid=p3984.m1439.l2649>`__.
+  - For standoffs the regular 3mm threads are too large.  I'm drilling into a metal case and hoping to use `2.5mm screws <http://www.ebay.com/itm/180677742101?ssPageName=STRK:MEWNX:IT&_trksid=p3984.m1439.l2649>`__ and a stack `washers <http://www.ebay.com/itm/320975892026?ssPageName=STRK:MEWNX:IT&_trksid=p3984.m1439.l2649>`__ to get right stand-off height.
 
 
 Contributing
@@ -41,14 +41,17 @@ Contributing
   - Then add simlinks to your arduino install to point to where you installed Ahah:
 
     cd /usr/share/arduino/examples
+
     sudo ln -s '/<path to>/opensprinkler/OpenSprinkler Controller/software/libraries/OpenSprinkler'
+
     cd /usr/share/arduino/libraries
+
     sudo ln-s '/<path to>/opensprinkler/OpenSprinkler Controller/software/libraries/OpenSprinkler'
 
    - Start **arduino** and specify your hardware (Mega 2560) from **Tools>>Board** menu.
    - Open the source code with **File>>Examples>>OpenSprinkler>>interval_program**
    
-Now you can help.
+Now you can help.  Maybe take the GitHub tour to figure out the rest.
 
 License
 =======
